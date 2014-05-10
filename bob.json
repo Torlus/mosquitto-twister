@@ -1,16 +1,17 @@
 {
+	"mosquitto": "127.0.0.1:2883",
 	"username": "mqtt_bob",
 	"following": [ "mqtt_alice" ],
 	
 	"publications": [
-		"/fridges/#"
+		"fridges/#"
 	],
 	"forwards": [
 		{ 
-			"from": "/fridges/#"
+			"from": "fridges/#"
 		}
 	],
 	"subscriptions": [
-		"+/doors/#"
+		"doors/#"
 	]
 }

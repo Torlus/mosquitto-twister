@@ -1,4 +1,4 @@
-import sys, json, time, base64
+import sys, json, time, base64, re
 import mosquitto
 from bitcoinrpc.authproxy import AuthServiceProxy 
 
@@ -24,7 +24,8 @@ if not username in following:
 	following = [username] + following
 
 # Mosquitto client library configuration
-mosquitto_address = config.get('mosquitto') or "127.0.0.1"
+mosquitto_address = config.get('mosquitto') or "127.0.0.1:1883"
+mosquitto_host, mosquitto_port = mosquitto_address.split(":")
 
 ################################################################################
 # Twister setup
@@ -106,26 +107,36 @@ def on_disconnect(mosq, obj, rc):
     print("MQTT: Disconnected.")
 
 def on_publish(mosq, obj, mid):
-    #print("Message "+str(mid)+" published.")
+    print("MQTT: Message "+str(mid)+" published.")
     pass
 
 def on_message(mosq, obj, msg):
+	print("MQTT: Message received." + str(msg.mid))
 	global all_subs
 	msg = { "topic": msg.topic, "qos": msg.qos, 
 		"payload": str(base64.b64encode(msg.payload),'ascii') }
 	for ward in forwards:
 		fw_topic = ward.get("from")
+		if not topic_match(fw_topic, msg["topic"]):
+			continue
 		fw_type = ward.get("type") or "public"
 		if fw_type == "public":
 			print("Publishing to public timeline:"+json.dumps(msg))
 			twister.newpostmsg(username, latest_posts[username] + 1, 
 				json.dumps(msg))
+			print("Done.")
 		else:
 			fw_rcpts = ward.get("to") or []
 			for rcpt in fw_rcpts:
-				print("Sending direct message to "+rcpt+":"+json.dumps(msg))
-				twister.newdirectmsg(username, latest_dms[username] + 1, 
-					rcpt, json.dumps(msg))
+				subs = all_subs.get(rcpt) or []
+				for sub in subs:
+					#print("match(pub): " + sub + ":" + msg["topic"])
+					if not topic_match(sub, msg["topic"]):
+						continue
+					print("Sending direct message to "+rcpt+":"+json.dumps(msg))
+					twister.newdirectmsg(username, latest_dms[username] + 1, 
+						rcpt, json.dumps(msg))
+					print("Done.")
 
 def on_subscribe(mosq, obj, mid, qos_list):
     #print("Subscribe with mid "+str(mid)+" received.")
@@ -144,7 +155,7 @@ client.on_message = on_message
 client.on_subscribe = on_subscribe
 client.on_unsubscribe = on_unsubscribe
 
-client.connect(mosquitto_address)
+client.connect(mosquitto_host, int(mosquitto_port))
 
 for topic in publications:
 	client.subscribe(topic)
@@ -154,6 +165,22 @@ for topic in publications:
 # Main loop
 ################################################################################
 ################################################################################
+
+# Ahem...
+def topic_match(pattern, value):
+	pattern = pattern.replace("#",".*")
+	pattern = pattern.replace("+","[^/]*")
+	prog = re.compile(pattern)
+	return prog.match(value)
+
+def handle_message(mosq, user, msg):
+	global subscriptions
+	for sub in subscriptions:
+		#print("match(sub): " + sub + ":" + msg["topic"])
+		if not topic_match(sub, msg["topic"]):
+			continue
+		#print(base64.b64decode(msg["payload"]))
+		client.publish(msg["topic"], bytearray(base64.b64decode(msg["payload"])), msg["qos"])
 
 while(client.loop() == 0):
 	for fellow in following:
@@ -170,9 +197,12 @@ while(client.loop() == 0):
 			except:
 				sender = username
 			if not sender == username:
-				print("### RECEIVED") 
-				print(post)
+				try:
+					handle_message(client, fellow, json.loads(post["userpost"]["msg"]))
+				except:
+					print("Error while processing post.")
 
+		# Update direct messages
 		dms = twister.getdirectmsgs(fellow, 100, [{"username":username, "since_id":latest_dms[fellow]}])
 		dms = dms.get(username) or []
 		try:
@@ -180,12 +210,15 @@ while(client.loop() == 0):
 		except:
 			last = latest_dms[fellow]
 		latest_dms[fellow] = last
+		#print("last:" + fellow + ":"+ str(latest_dms[fellow]))
 		for dm in dms:
-			print("### DIRECT") 
-			print(dm)
+			try:
+				handle_message(client, fellow, json.loads(dm["text"]))
+			except:
+				print("Error while processing direct message.")
 
 		# Update subscriptions
-		data = twister.dhtget(username, "profile", "s")
+		data = twister.dhtget(fellow, "profile", "s")
 		try:
 			all_subs[fellow] = data[0]["p"]["v"]["mqtt_topics"]
 		except:
