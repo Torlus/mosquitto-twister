@@ -48,7 +48,7 @@ as it may take some time for your username to be validated at the blockchain lev
 
 Now install the required Python libraries:
 ```
-pip install -e ../mosquitto/lib/python
+pip install paho-mqtt
 pip install git+https://github.com/jgarzik/python-bitcoinrpc.git
 ```
 and you should be ready to go.
@@ -142,8 +142,8 @@ I'm looking forward to make something with this kind oh [hash functions](http://
 
 ## Implementation
 
-Finding the Twister project (and Mosquitto's Python library as well) allowed me
-to write a proof-of-concept in two days by hcking some Python, instead of spending
+Finding the Twister project (and Mosquitto's Python library as well, donated to [Eclipse Paho](http://www.eclipse.org/paho/)) 
+allowed me to write a proof-of-concept in two days by hcking some Python, instead of spending
 months with C or C++ which is fine. :)
 
 However there are of course some limitations:

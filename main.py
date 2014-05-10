@@ -1,5 +1,5 @@
 import sys, json, time, base64, re
-import mosquitto
+import paho.mqtt.client as mqtt
 from bitcoinrpc.authproxy import AuthServiceProxy 
 
 ################################################################################
@@ -146,7 +146,7 @@ def on_unsubscribe(mosq, obj, mid):
     #print("Unsubscribe with mid "+str(mid)+" received.")
     pass
 
-client = mosquitto.Mosquitto(username)
+client = mqtt.Client(username)
 
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
