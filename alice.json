@@ -1,0 +1,24 @@
+{
+	"username": "mqtt_alice",
+	"following": [ "mqtt_bob" ],
+	
+	"publications": [
+		"/sensors/#",
+		"/doors/#"
+	],
+	"forwards": [
+		{ 
+			"from": "/sensors/#"
+		},
+		{
+			"from": "/doors/#",
+			"type": "private",
+			"to": [ "mqtt_bob" ]
+		}
+	],
+	
+	"subscriptions": [
+		"+/fridges/#",
+		"+/earrings/#"
+	]
+}

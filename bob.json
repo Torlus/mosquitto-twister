@@ -1,0 +1,16 @@
+{
+	"username": "mqtt_bob",
+	"following": [ "mqtt_alice" ],
+	
+	"publications": [
+		"/fridges/#"
+	],
+	"forwards": [
+		{ 
+			"from": "/fridges/#"
+		}
+	],
+	"subscriptions": [
+		"+/doors/#"
+	]
+}
