@@ -117,7 +117,45 @@ MQTT: Message 2 published.
 
 # Details
 
-Coming soon...
+## General idea
+
+My first idea has been to patch Mosquitto to add support for [Kademlia DHT](http://en.wikipedia.org/wiki/Kademlia), and that's why I started [this fork](https://bitbucket.org/torlus/mosquitto-dht).
+
+However, apart form getting a distributed set of nodes, there were many other
+issues to address. Some of them are perfectly addressed by Twister, some others
+are yet to be figured out:
+- User identification. This one's addressed by a Bitcoin-like blockchain, where
+transactions correspond to user registrations. Incentive here is the ability given
+to whoever find the hash value to get the right to publish an advertising message.
+- Topics subscriptions. Here, they are stored in a per-user basis, in their profile.
+Which, well, does the job, as crawling the user base isn't so expensive, as you have
+to retreive the blockchain locally anyway. Then the profile details, stored in the DHT,
+carry the list of topics in which the user is interested in.
+- In my initial idea, the concept of Users wasn't as central as it is in Twister.
+But it seems that is not really an issue. Even more, the "following/followers" model
+fits nicely with the "publisher/subscriber" one. And it even makes more sense when dealing
+with private data (mapped to direct messages), where both parts need to follow each other.
+- One thing I'd like to address somehow is the ability to publish data "anonymously",
+i.e that data be really distributed across the network, with a location-specific addressing
+based on the topic, instead of the users. This rises up some issues about searching.
+I'm looking forward to make something with this kind oh [hash functions](http://en.wikipedia.org/wiki/Locality-sensitive_hashing).
+
+## Implementation
+
+Finding the Twister project (and Mosquitto's Python library as well) allowed me
+to write a proof-of-concept in two days by hcking some Python, instead of spending
+months with C or C++ which is fine. :)
+
+However there are of course some limitations:
+- MQTT QoS levels > 0 are not handled properly, as the delivery is ack'ed at the
+broker level by the **mosquitto-twister** bridge which is seen as a client.
+To properly handle that, some modifications should be done at the broker/bridge level,
+and an acknowledgment message should be carried across the Twister network for QoS = 2 type of messages.
+- The "Retain" rules haven't been taken into account as well. I haven't check the
+rules about multiple subscribers/topics delivery.
+- For more efficiency, I guess that messages batching should be considered at some point.
+
+
 
 # Acknowledgments
 
